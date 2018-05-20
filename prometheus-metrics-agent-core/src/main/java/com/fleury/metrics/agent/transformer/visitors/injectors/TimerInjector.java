@@ -4,6 +4,7 @@ import static com.fleury.metrics.agent.config.Configuration.staticFinalFieldName
 import static com.fleury.metrics.agent.model.MetricType.Timed;
 
 import com.fleury.metrics.agent.model.Metric;
+
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.AdviceAdapter;
@@ -55,19 +56,21 @@ public class TimerInjector extends AbstractInjector {
     public void injectAtMethodEnter() {
         startFinally = new Label();
         startTimeVar = aa.newLocal(Type.LONG_TYPE);
-        aa.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
-        aa.visitVarInsn(LSTORE, startTimeVar);
-        aa.visitLabel(startFinally);
+        mv.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
+        mv.visitVarInsn(LSTORE, startTimeVar);
+        mv.visitLabel(startFinally);
     }
 
     @Override
     public void injectAtVisitMaxs(int maxStack, int maxLocals) {
         Label endFinally = new Label();
-        aa.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
-        aa.visitLabel(endFinally);
+        mv.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
+        mv.visitLabel(endFinally);
         
         onFinally(ATHROW);
-        aa.visitInsn(ATHROW);
+        mv.visitInsn(ATHROW);
+//        Label timeEnd = new Label();
+//        mv.visitLabel(timeEnd);
     }
 
     @Override
@@ -78,12 +81,17 @@ public class TimerInjector extends AbstractInjector {
     }
 
     private void onFinally(int opcode) {
-        aa.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Timed.getCoreType()));
+        if (opcode == ATHROW)
+            mv.visitInsn(DUP);
+        else
+            mv.visitInsn(ACONST_NULL);
+
+        mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Timed.getCoreType()));
         injectLabelsToStack(metric);
 
-        aa.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
-        aa.visitVarInsn(LLOAD, startTimeVar);
-        aa.visitInsn(LSUB);
-        aa.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, METHOD, SIGNATURE, false);
+        mv.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
+        mv.visitVarInsn(LLOAD, startTimeVar);
+        mv.visitInsn(LSUB);
+        mv.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, METHOD, SIGNATURE, false);
     }
 }

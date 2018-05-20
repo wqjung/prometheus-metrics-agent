@@ -12,11 +12,15 @@ import com.fleury.metrics.agent.model.LabelUtil;
 import com.fleury.metrics.agent.model.Metric;
 import com.fleury.metrics.agent.reporter.PrometheusMetricSystem;
 import com.fleury.metrics.agent.transformer.util.OpCodeUtil;
-import java.util.List;
+import com.fleury.metrics.agent.transformer.visitors.MetricAdapter;
+
 import org.apache.commons.beanutils.PropertyUtils;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.AdviceAdapter;
+
+import java.util.List;
 
 /**
  *
@@ -31,6 +35,7 @@ public abstract class AbstractInjector implements Injector, Opcodes {
     }
 
     protected final AdviceAdapter aa;
+    protected final MethodVisitor mv;
     protected final Type[] argTypes;
     protected final int access;
     protected final String className;
@@ -40,6 +45,7 @@ public abstract class AbstractInjector implements Injector, Opcodes {
         this.className = className;
         this.argTypes = argTypes;
         this.access = access;
+        this.mv = ((MetricAdapter)aa).getMethodVistor();
     }
 
     @Override
@@ -58,27 +64,27 @@ public abstract class AbstractInjector implements Injector, Opcodes {
         List<String> labelValues = LabelUtil.getLabelValues(metric.getLabels());
 
         if (isNotEmpty(labelValues)) {
-            aa.visitInsn(OpCodeUtil.getIConstOpcodeForInteger(labelValues.size()));
-            aa.visitTypeInsn(ANEWARRAY, Type.getInternalName(String.class));
+            mv.visitInsn(OpCodeUtil.getIConstOpcodeForInteger(labelValues.size()));
+            mv.visitTypeInsn(ANEWARRAY, Type.getInternalName(String.class));
 
             for (int i = 0; i < labelValues.size(); i++) {
-                aa.visitInsn(DUP);
-                aa.visitInsn(OpCodeUtil.getIConstOpcodeForInteger(i));
+                mv.visitInsn(DUP);
+                mv.visitInsn(OpCodeUtil.getIConstOpcodeForInteger(i));
                 injectLabelValueToStack(labelValues.get(i));
             }
 
         } else {
-            aa.visitInsn(ACONST_NULL);
+            mv.visitInsn(ACONST_NULL);
         }
     }
 
     private void injectLabelValueToStack(String labelValue) {
         if (!isTemplatedLabelValue(labelValue)) {
-            aa.visitLdcInsn(labelValue);
+            mv.visitLdcInsn(labelValue);
         } 
         else {
             if (isThis(labelValue)) {
-                aa.visitVarInsn(ALOAD, 0); //aa.loadThis();
+                mv.visitVarInsn(ALOAD, 0); //aa.loadThis();
             }
             
             else {
@@ -88,9 +94,9 @@ public abstract class AbstractInjector implements Injector, Opcodes {
             }
 
             if (isLabelVarNested(labelValue)) {
-                aa.visitLdcInsn(getNestedLabelVar(labelValue));
+                mv.visitLdcInsn(getNestedLabelVar(labelValue));
 
-                aa.visitMethodInsn(INVOKESTATIC, Type.getInternalName(PropertyUtils.class),
+                mv.visitMethodInsn(INVOKESTATIC, Type.getInternalName(PropertyUtils.class),
                         "getNestedProperty",
                         Type.getMethodDescriptor(
                                 Type.getType(Object.class),
@@ -98,15 +104,15 @@ public abstract class AbstractInjector implements Injector, Opcodes {
                         false);
             }
 
-            aa.visitMethodInsn(INVOKESTATIC, Type.getInternalName(String.class),
+            mv.visitMethodInsn(INVOKESTATIC, Type.getInternalName(String.class),
                     "valueOf",
                     Type.getMethodDescriptor(
                             Type.getType(String.class),
                             Type.getType(Object.class)),
                     false);
         }
-       
-        aa.visitInsn(AASTORE);
+
+        mv.visitInsn(AASTORE);
     }
 
     private void boxParameterAndLoad(int argIndex) {
@@ -115,12 +121,12 @@ public abstract class AbstractInjector implements Injector, Opcodes {
         
         switch (type.getSort()) {
             case Type.OBJECT: //no need to box Object
-                aa.visitVarInsn(ALOAD, stackIndex);  
+                mv.visitVarInsn(ALOAD, stackIndex);
                 break;
                 
             default:
                 // aa.loadArg(argIndex); //doesn't work...
-                aa.visitVarInsn(type.getOpcode(Opcodes.ILOAD), stackIndex);
+                mv.visitVarInsn(type.getOpcode(Opcodes.ILOAD), stackIndex);
                 aa.valueOf(type);
                 break;
         }

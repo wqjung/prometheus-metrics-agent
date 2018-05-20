@@ -67,24 +67,24 @@ public class TimedExceptionCountedInjector extends AbstractInjector {
     public void injectAtMethodEnter() {
         startFinally = new Label();
         startTimeVar = aa.newLocal(Type.LONG_TYPE);
-        aa.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
-        aa.visitVarInsn(LSTORE, startTimeVar);
-        aa.visitLabel(startFinally);
+        mv.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
+        mv.visitVarInsn(LSTORE, startTimeVar);
+        mv.visitLabel(startFinally);
     }
 
     @Override
     public void injectAtVisitMaxs(int maxStack, int maxLocals) {
         Label endFinally = new Label();
-        aa.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
-        aa.visitLabel(endFinally);
+        mv.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
+        mv.visitLabel(endFinally);
 
-        aa.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(exceptionMetric), Type.getDescriptor(Counted.getCoreType()));
+        mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(exceptionMetric), Type.getDescriptor(Counted.getCoreType()));
         injectLabelsToStack(exceptionMetric);
-        aa.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, EXCEPTION_COUNT_METHOD, 
+        mv.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, EXCEPTION_COUNT_METHOD,
                 EXCEPTION_COUNT_SIGNATURE, false);
-        
+
         onFinally(ATHROW);
-        aa.visitInsn(ATHROW);
+        mv.visitInsn(ATHROW);
     }
 
     @Override
@@ -95,12 +95,12 @@ public class TimedExceptionCountedInjector extends AbstractInjector {
     }
 
     private void onFinally(int opcode) {
-        aa.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(timerMetric), Type.getDescriptor(Timed.getCoreType()));
+        mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(timerMetric), Type.getDescriptor(Timed.getCoreType()));
         injectLabelsToStack(timerMetric);
 
-        aa.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
-        aa.visitVarInsn(LLOAD, startTimeVar);
-        aa.visitInsn(LSUB);
-        aa.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, TIMER_METHOD, TIMER_SIGNATURE, false);
+        mv.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
+        mv.visitVarInsn(LLOAD, startTimeVar);
+        mv.visitInsn(LSUB);
+        mv.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, TIMER_METHOD, TIMER_SIGNATURE, false);
     }
 }

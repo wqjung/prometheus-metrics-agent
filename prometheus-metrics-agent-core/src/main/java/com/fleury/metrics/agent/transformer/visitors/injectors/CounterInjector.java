@@ -44,10 +44,10 @@ public class CounterInjector extends AbstractInjector {
 
     @Override
     public void injectAtMethodEnter() {
-        aa.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Counted.getCoreType()));
+        mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Counted.getCoreType()));
         injectLabelsToStack(metric);
 
-        aa.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, METHOD, SIGNATURE, false);
+        mv.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, METHOD, SIGNATURE, false);
     }
 
 }

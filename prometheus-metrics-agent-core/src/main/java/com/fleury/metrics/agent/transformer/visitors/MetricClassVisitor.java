@@ -11,11 +11,13 @@ import static org.objectweb.asm.Opcodes.RETURN;
 
 import com.fleury.metrics.agent.config.Configuration;
 import com.fleury.metrics.agent.model.Metric;
-import java.util.List;
+
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.JSRInlinerAdapter;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  *
@@ -29,6 +31,7 @@ public class MetricClassVisitor extends ClassVisitor {
     private boolean visitedStaticBlock = false;
     private Configuration config;
     private List<Metric> classMetrics;
+    private MetricAdapter metricAdapter = null;
 
     public MetricClassVisitor(ClassVisitor cv, Configuration config) {
         super(ASM5, cv);
@@ -64,8 +67,18 @@ public class MetricClassVisitor extends ClassVisitor {
         if (!isInterface && !isSyntheticMethod && mv != null) {
             List<Metric> metadata = config.findMetrics(className, name, desc);
 
-            mv = new MetricAdapter(mv, className, access, name, desc, metadata);
-            mv = new JSRInlinerAdapter(mv, access, name, desc, signature, exceptions);
+            // instead of having one AdviceAdapter and loop thru each Injection
+            // create one AdviceAdapter for every metric injection
+            // this remove the random start error.
+            // will not change interface, so pass in List of one item.
+            for (Metric metric: metadata){
+                mv = new MetricAdapter(mv, className, access, name, desc, Arrays.asList(metric));
+            }
+//            mv = new MetricAdapter(mv, className, access, name, desc, metadata);
+
+            // minimized code change, if code is not compatible just don't run it for now
+//            mv = new JSRInlinerAdapter(mv, access, name, desc, signature, exceptions);
+
         }
 
         // initialize static fields if the static initializer block already exists in the class

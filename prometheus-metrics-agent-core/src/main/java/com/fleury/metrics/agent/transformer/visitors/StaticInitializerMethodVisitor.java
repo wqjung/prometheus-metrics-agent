@@ -7,10 +7,12 @@ import static com.fleury.metrics.agent.transformer.util.CollectionUtil.isNotEmpt
 import com.fleury.metrics.agent.model.Metric;
 import com.fleury.metrics.agent.reporter.PrometheusMetricSystem;
 import com.fleury.metrics.agent.transformer.util.OpCodeUtil;
-import java.util.List;
+
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.AdviceAdapter;
+
+import java.util.List;
 
 
 public class StaticInitializerMethodVisitor extends AdviceAdapter {
@@ -36,7 +38,7 @@ public class StaticInitializerMethodVisitor extends AdviceAdapter {
 
     private void addMetric(Metric metric) {
         // load name
-        super.visitLdcInsn(metric.getName());
+        mv.visitLdcInsn(metric.getName());
 
         // load labels
         if (isNotEmpty(metric.getLabels())) {
@@ -45,27 +47,27 @@ public class StaticInitializerMethodVisitor extends AdviceAdapter {
                         + metric.getName() + " has " + metric.getLabels().size());
             }
 
-            super.visitInsn(OpCodeUtil.getIConstOpcodeForInteger(metric.getLabels().size()));
-            super.visitTypeInsn(ANEWARRAY, Type.getInternalName(String.class));
+            mv.visitInsn(OpCodeUtil.getIConstOpcodeForInteger(metric.getLabels().size()));
+            mv.visitTypeInsn(ANEWARRAY, Type.getInternalName(String.class));
 
             List<String> labelNames = getLabelNames(metric.getLabels());
             for (int i = 0; i < labelNames.size(); i++) {
-                super.visitInsn(DUP);
-                super.visitInsn(OpCodeUtil.getIConstOpcodeForInteger(i));
-                super.visitLdcInsn(labelNames.get(i));
-                super.visitInsn(AASTORE);
+                mv.visitInsn(DUP);
+                mv.visitInsn(OpCodeUtil.getIConstOpcodeForInteger(i));
+                mv.visitLdcInsn(labelNames.get(i));
+                mv.visitInsn(AASTORE);
             }
         }
         // or null if non labels
         else {
-            super.visitInsn(ACONST_NULL);
+            mv.visitInsn(ACONST_NULL);
         }
 
         // load doc
-        super.visitLdcInsn(metric.getDoc() == null ? "empty doc" : metric.getDoc());
+        mv.visitLdcInsn(metric.getDoc() == null ? "empty doc" : metric.getDoc());
 
         // call PrometheusMetricSystem.createAndRegisterCounted/Timed/Gauged(...)
-        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(PrometheusMetricSystem.class),
+        mv.visitMethodInsn(INVOKESTATIC, Type.getInternalName(PrometheusMetricSystem.class),
                 "createAndRegister" + metric.getType().name(),
                 Type.getMethodDescriptor(
                         Type.getType(metric.getType().getCoreType()),
@@ -73,7 +75,7 @@ public class StaticInitializerMethodVisitor extends AdviceAdapter {
                 false);
 
         // store metric in class static field
-        super.visitFieldInsn(PUTSTATIC, className, staticFinalFieldName(metric),
+        mv.visitFieldInsn(PUTSTATIC, className, staticFinalFieldName(metric),
                 Type.getDescriptor(metric.getType().getCoreType()));
     }
 }

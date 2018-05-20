@@ -53,19 +53,19 @@ public class ExceptionCounterInjector extends AbstractInjector {
     @Override
     public void injectAtMethodEnter() {
         startFinally = new Label();
-        aa.visitLabel(startFinally);
+        mv.visitLabel(startFinally);
     }
 
     @Override
     public void injectAtVisitMaxs(int maxStack, int maxLocals) {
         Label endFinally = new Label();
-        aa.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
-        aa.visitLabel(endFinally);
+        mv.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
+        mv.visitLabel(endFinally);
 
-        aa.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Counted.getCoreType()));
+        mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Counted.getCoreType()));
         injectLabelsToStack(metric);
-        aa.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, METHOD, SIGNATURE, false);
+        mv.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, METHOD, SIGNATURE, false);
         
-        aa.visitInsn(ATHROW);
+        mv.visitInsn(ATHROW);
     }
 }

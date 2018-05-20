@@ -46,7 +46,7 @@ public class GaugeInjector extends AbstractInjector {
     private final Metric metric;
 
     private Label startFinally;
-    
+
     public GaugeInjector(Metric metric, AdviceAdapter aa, String className, Type[] argTypes, int access) {
         super(aa, className, argTypes, access);
         this.metric = metric;
@@ -55,22 +55,22 @@ public class GaugeInjector extends AbstractInjector {
     @Override
     public void injectAtMethodEnter() {
         startFinally = new Label();
-        aa.visitLabel(startFinally);
 
-        aa.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Gauged.getCoreType()));
+        mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Gauged.getCoreType()));
         injectLabelsToStack(metric);
 
-        aa.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, INC_METHOD, SIGNATURE, false);
+        mv.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, INC_METHOD, SIGNATURE, false);
+        mv.visitLabel(startFinally);
     }
 
     @Override
     public void injectAtVisitMaxs(int maxStack, int maxLocals) {
         Label endFinally = new Label();
-        aa.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
-        aa.visitLabel(endFinally);
+        mv.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
+        mv.visitLabel(endFinally);
 
         onFinally(ATHROW);
-        aa.visitInsn(ATHROW);
+        mv.visitInsn(ATHROW);
     }
 
     @Override
@@ -81,9 +81,13 @@ public class GaugeInjector extends AbstractInjector {
     }
 
     private void onFinally(int opcode) {
-        aa.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Gauged.getCoreType()));
+        if (opcode == ATHROW)
+            mv.visitInsn(DUP);
+        else
+            mv.visitInsn(ACONST_NULL);
+        mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Gauged.getCoreType()));
         injectLabelsToStack(metric);
 
-        aa.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, DEC_METHOD, SIGNATURE, false);
+        mv.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, DEC_METHOD, SIGNATURE, false);
     }
 }
