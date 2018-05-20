@@ -100,10 +100,14 @@ public class PrometheusMetricSystem {
     }
 
     public static void recordTime(Histogram histogram, String[] labels, long duration) {
+        // histogram duration is in seconds.  Convert nanosecond -> second        
+        double durationInSec = (double)(duration) / 1E9;
+        //  LOGGER.info("recordTime durationInSec " + durationInSec);
         if (labels != null) {
-            histogram.labels(labels).observe(duration);
+
+            histogram.labels(labels).observe(durationInSec);
         } else {
-            histogram.observe(duration);
+            histogram.observe(durationInSec);
         }
     }
 
