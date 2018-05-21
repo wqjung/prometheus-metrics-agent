@@ -3,21 +3,24 @@ package com.fleury.metrics.agent.reporter;
 import static com.fleury.metrics.agent.config.Configuration.YAML_MAPPER;
 import static java.util.logging.Level.WARNING;
 
-import io.prometheus.client.Counter;
-import io.prometheus.client.Gauge;
-import io.prometheus.client.Histogram;
-import io.prometheus.client.exporter.HTTPServer;
-import io.prometheus.client.hotspot.ClassLoadingExports;
-import io.prometheus.client.hotspot.GarbageCollectorExports;
-import io.prometheus.client.hotspot.MemoryPoolsExports;
-import io.prometheus.client.hotspot.StandardExports;
-import io.prometheus.client.hotspot.ThreadExports;
-import io.prometheus.jmx.JmxCollector;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
+
+import io.prometheus.client.Counter;
+import io.prometheus.client.Gauge;
+import io.prometheus.client.Histogram;
+import io.prometheus.client.exporter.HTTPServer;
+import io.prometheus.client.hotspot.BufferPoolsExports;
+import io.prometheus.client.hotspot.ClassLoadingExports;
+import io.prometheus.client.hotspot.GarbageCollectorExports;
+import io.prometheus.client.hotspot.MemoryPoolsExports;
+import io.prometheus.client.hotspot.StandardExports;
+import io.prometheus.client.hotspot.ThreadExports;
+import io.prometheus.client.hotspot.VersionInfoExports;
+import io.prometheus.jmx.JmxCollector;
 
 /**
  * The static methods in this class are called from the bytecode we instrument. Hence do not change any static methods
@@ -167,6 +170,7 @@ public class PrometheusMetricSystem {
             return;
         }
         Set<String> jvmMetrics = new HashSet<String>((List<String>)configuration.get("jvm"));
+
         if (jvmMetrics.contains("gc")) {
             new GarbageCollectorExports().register();
         }
@@ -181,6 +185,14 @@ public class PrometheusMetricSystem {
 
         if (jvmMetrics.contains("classloader")) {
             new ClassLoadingExports().register();
+        }
+
+        if (jvmMetrics.contains("buffer")) {
+            new BufferPoolsExports().register();
+        }
+
+        if (jvmMetrics.contains("version")) {
+            new VersionInfoExports().register();
         }
     }
 }
