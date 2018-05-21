@@ -55,12 +55,12 @@ public class GaugeInjector extends AbstractInjector {
     @Override
     public void injectAtMethodEnter() {
         startFinally = new Label();
+        mv.visitLabel(startFinally);
 
         mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Gauged.getCoreType()));
         injectLabelsToStack(metric);
 
         mv.visitMethodInsn(INVOKESTATIC, METRIC_REPORTER_CLASSNAME, INC_METHOD, SIGNATURE, false);
-        mv.visitLabel(startFinally);
     }
 
     @Override
@@ -81,10 +81,6 @@ public class GaugeInjector extends AbstractInjector {
     }
 
     private void onFinally(int opcode) {
-        if (opcode == ATHROW)
-            mv.visitInsn(DUP);
-        else
-            mv.visitInsn(ACONST_NULL);
         mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Gauged.getCoreType()));
         injectLabelsToStack(metric);
 

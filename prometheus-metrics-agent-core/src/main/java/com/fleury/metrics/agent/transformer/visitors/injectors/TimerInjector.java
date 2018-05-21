@@ -43,7 +43,7 @@ public class TimerInjector extends AbstractInjector {
             Type.getType(Timed.getCoreType()), Type.getType(String[].class), Type.LONG_TYPE);
 
     private final Metric metric;
-    
+
     private int startTimeVar;
     private Label startFinally;
 
@@ -66,7 +66,7 @@ public class TimerInjector extends AbstractInjector {
         Label endFinally = new Label();
         mv.visitTryCatchBlock(startFinally, endFinally, endFinally, null);
         mv.visitLabel(endFinally);
-        
+
         onFinally(ATHROW);
         mv.visitInsn(ATHROW);
 //        Label timeEnd = new Label();
@@ -81,11 +81,6 @@ public class TimerInjector extends AbstractInjector {
     }
 
     private void onFinally(int opcode) {
-        if (opcode == ATHROW)
-            mv.visitInsn(DUP);
-        else
-            mv.visitInsn(ACONST_NULL);
-
         mv.visitFieldInsn(GETSTATIC, className, staticFinalFieldName(metric), Type.getDescriptor(Timed.getCoreType()));
         injectLabelsToStack(metric);
 
